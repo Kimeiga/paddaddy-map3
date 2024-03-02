@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+	<style>
+		body {
+			margin: 0;
+		}
+
+
+		/* HTML marker styles */
+		.marker {
+			border-radius: 8px;
+			color: #ffffff;
+			/* font-size: 14px; */
+			padding: 2px 5px;
+			position: relative;
+		}
+
+		.marker::after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 100%;
+			transform: translate(-50%, 0);
+			width: 0;
+			height: 0;
+			border-left: 8px solid transparent;
+			border-right: 8px solid transparent;
+			/* border-top: 8px solid #4285f4; */
+		}
+
+
+		/* .custom-marker {
+    background-color: white;
+    padding: 2px;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-size: 12px;
+} */
+
+		.marker:hover {
+			/* background-color: #3c78d8; */
+		}
+
+		.on-focus {
+			background-color: red;
+		}
+
+		.highlight {
+			background-color: #FFFFFF;
+			border-radius: 8px;
+			box-shadow: 10px 10px 5px rgba(0, 0, 0, 0.2);
+			height: 80px;
+			padding: 8px 15px;
+			width: auto;
+		}
+	</style>
+
+	%sveltekit.head%
+</head>
+
+<body data-sveltekit-preload-data="hover">
+	<div style="display: contents">%sveltekit.body%</div>
+</body>
+
+</html>

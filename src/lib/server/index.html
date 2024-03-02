@@ -1,0 +1,71 @@
+<head>
+    <title>Place a Pin on Google Maps</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        /* Set the size of the div element that contains the map */
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Add styles for the panel */
+        #panel {
+            width: 350px;
+            height: 100vh;
+            overflow: auto;
+            background-color: white;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 5;
+            padding: 10px;
+            box-shadow: -3px 0 5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="panel"></div> <!-- Panel for directions -->
+    <div id="map"></div>
+
+    <script>
+        function initMap() {
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer();
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 14,
+                center: { lat: 40.737, lng: -74.003 } // Approximate center between locations
+            });
+            directionsRenderer.setMap(map);
+            directionsRenderer.setPanel(document.getElementById('panel')); // Set the panel to display directions
+
+            calculateAndDisplayRoute(directionsService, directionsRenderer);
+        }
+
+        function calculateAndDisplayRoute(directionsService, directionsRenderer) {
+            directionsService.route({
+                origin: "515 East 86th Street #907, New York, NY",
+                destination: "Flatiron Building, New York, NY",
+                travelMode: 'TRANSIT',
+                transitOptions: {
+                    modes: ['SUBWAY'],
+                    routingPreference: 'FEWER_TRANSFERS'
+                }
+            }, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+    </script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCJKapYkEXB-jHM5htvhdCbuYG40haS0Cc&callback=initMap">
+    </script>
+</body>
+
+</html>
