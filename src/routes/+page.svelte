@@ -3,46 +3,29 @@
 
 	export let data;
 
+	$: console.log(data);
+
 	let map;
-	let maxCommuteTime = 60; // or any other default value
-	let filteredProperties;
-
-	$: {
-		filteredProperties = data.neighborhoods.flatMap((neighborhood) =>
-			neighborhood.units.filter((unit) => {
-				const timeMatch = unit.commute_obj.legs[0].duration.text.match(/(\d+)/);
-				if (!timeMatch) return false; // Skip if no time found
-
-				const time = parseInt(timeMatch[1], 10);
-				console.log(time <= maxCommuteTime);
-				return time <= maxCommuteTime; // Only include units within the commute time
-			})
-		);
-	}
+	let maxCommuteTime = 60;
+	let markers = [];
 
 	function getBackgroundColor(commuteTime) {
-		const timeMatch = commuteTime.match(/(\d+)/); // Extracts digits from the string
-		if (!timeMatch) return 'gray'; // Return a default color if no time found
+		const timeMatch = commuteTime.match(/(\d+)/);
+		if (!timeMatch) return 'gray';
 
-		const time = Math.min(parseInt(timeMatch[1], 10), 60); // Parse to integer and cap at 60 minutes for color calculation
-		// We'll map time from 0 to 60 minutes to a change in hue from green to red in OKLCH space
-		// Assuming green starts at 142 and red is around 0 (or 360), we will adjust accordingly:
-		// Note: Adjust 'startHue' and 'endHue' based on exact colors you need
+		const time = Math.min(parseInt(timeMatch[1], 10), 60);
 		const startHue = 142.23;
-		const endHue = 0; // Looping towards red
-		// Calculate current hue based on commute time. If more than 30 minutes, adjust for a spectrum towards red.
+		const endHue = 0;
 		let hue;
+
 		if (time <= 30) {
-			// Calculate a transition from green to yellow/orange (midway hue, adjust if needed)
-			hue = startHue - (startHue / 30) * time; // Adjust if different midway point is preferred
+			hue = startHue - (startHue / 30) * time;
 		} else {
-			// Calculate transition from yellow/orange to red
-			// Here, assuming endHue is less than start of hue range for green to yellow
-			let additionalHue = (time - 30) * (startHue / 30); // This simulates going 'backwards' in hue
-			hue = 360 - additionalHue; // Looping back towards red as time increases
+			let additionalHue = (time - 30) * (startHue / 30);
+			hue = 360 - additionalHue;
 		}
 
-		return `oklch(65.71% 0.1519  ${hue})`; // Adjust lightness and chroma as needed
+		return `oklch(65.71% 0.1519  ${hue})`;
 	}
 
 	function toggleHighlight(markerView) {
@@ -55,65 +38,69 @@
 		}
 	}
 
+	function createMarkers() {
+		markers.forEach((marker) => marker.setMap(null));
+		markers = [];
+
+		data.neighborhoods.forEach((neighborhood) => {
+			neighborhood.units.forEach((unit) => {
+				if (unit.location && unit.commute_obj) {
+					const timeMatch = unit.commute_obj.legs[0].duration.text.match(/(\d+)/);
+					if (!timeMatch) return;
+
+					const time = parseInt(timeMatch[1], 10);
+					if (time > maxCommuteTime) return;
+
+					const position = { lat: unit.location.lat, lng: unit.location.lng };
+					const commuteTime = unit.commute_obj.legs[0].duration.text;
+
+					const content = document.createElement('div');
+					content.textContent = unit.monthly_price_dollars.toString();
+					content.classList.add('marker');
+					content.style.backgroundColor = getBackgroundColor(commuteTime);
+
+					const marker = new google.maps.marker.AdvancedMarkerElement({
+						position: position,
+						map: map,
+						content: content,
+						title: unit.unit_name
+					});
+
+					marker.addListener('click', () => {
+						toggleHighlight(marker);
+					});
+
+					marker.addListener('mouseenter', () => {
+						content.classList.add('on-focus');
+					});
+
+					marker.addListener('mouseleave', () => {
+						content.classList.remove('on-focus');
+					});
+
+					markers.push(marker);
+				}
+			});
+		});
+	}
+
 	onMount(async () => {
-		// Load the Google Maps and the marker library
 		const { google } = window;
 		const { AdvancedMarkerElement } = await google.maps.marker;
 
-		// Initialize the map
 		map = new google.maps.Map(document.getElementById('map'), {
 			zoom: 12,
-			center: { lat: 40.737, lng: -74.003 }, // Central location
+			center: { lat: 40.737, lng: -74.003 },
 			mapId: 'eda1e0b84e64956b'
 		});
 
-		console.log(data);
-
-		filteredProperties.forEach((unit) => {
-			// neighborhood.units.forEach((unit) => {
-			if (unit.location && unit.commute_obj) {
-				const position = { lat: unit.location.lat, lng: unit.location.lng };
-				const commuteTime = unit.commute_obj.legs[0].duration.text; // Adjust based on actual structure
-
-				// Create a div element for the marker content
-				const content = document.createElement('div');
-				content.textContent = unit.monthly_price_dollars.toString(); // Display the price
-				content.classList.add('marker');
-				content.style.backgroundColor = getBackgroundColor(commuteTime); // Set background color based on commute time
-
-				// Create the advanced marker
-				const marker = new AdvancedMarkerElement({
-					position: position,
-					map: map,
-					content: content, // Use the content div as the marker
-					title: unit.unit_name // Tooltip
-				});
-
-				marker.addListener('click', () => {
-					toggleHighlight(marker);
-				});
-
-				marker.addListener('mouseenter', () => {
-					content.classList.add('on-focus');
-				});
-
-				marker.addListener('mouseleave', () => {
-					content.classList.remove('on-focus');
-				});
-			}
-			// });
-		});
+		createMarkers();
+		maxCommuteTime = maxCommuteTime;
 	});
 </script>
 
 <div class="slider-container">
-	<input
-		type="range"
-		min="0"
-		max="60"
-		value={maxCommuteTime}
-		on:change={(e) => (maxCommuteTime = +e.target.value)}
-	/>
+	<input type="range" min="0" max="60" bind:value={maxCommuteTime} on:change={createMarkers} />
 	<p>{maxCommuteTime} minutes</p>
 </div>
 
@@ -138,7 +125,7 @@
 		width: 100%;
 	}
 
-	.custom-marker {
+	.marker {
 		background-color: white;
 		padding: 5px;
 		border-radius: 5px;
@@ -146,16 +133,22 @@
 		font-size: 14px;
 	}
 
+	.highlight {
+		background-color: yellow;
+	}
+
+	.on-focus {
+		font-weight: bold;
+	}
+
 	.slider-container {
 		position: absolute;
-		top: 20px; /* Adjust based on your layout */
-		left: 20px; /* Adjust based on your layout */
-		z-index: 5; /* Ensure it appears above the map */
+		top: 20px;
+		left: 20px;
+		z-index: 5;
 		background-color: rgba(255, 255, 255, 0.8);
 		padding: 10px;
 		border-radius: 8px;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 	}
-
-	/* Add more styles if needed */
 </style>
